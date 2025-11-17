@@ -1,4 +1,13 @@
-use std::{env, fs, os::unix::fs::MetadataExt, path::Path, time::{SystemTime, UNIX_EPOCH},};
+
+use std::{
+    env, fs,
+    path::Path,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+#[cfg(unix)]
+use std::os::unix::fs::MetadataExt;
+
 use chrono::{DateTime, Local};
 use unicode_width::{UnicodeWidthStr, UnicodeWidthChar};
 use unicode_segmentation::UnicodeSegmentation;
@@ -44,6 +53,16 @@ fn display_width(text: &str) -> usize {
     }
     width
 }
+#[cfg(unix)]
+fn get_platform_perms(mode: u32) -> String {
+    perms_to_string(mode)
+}
+
+#[cfg(not(unix))]
+fn get_platform_perms(_mode: u32) -> String {
+    String::new()
+}
+
 fn get_file_info(entry: &fs::DirEntry, show_perms: bool) -> Option<Vec<String>> {
     let path = entry.path();
     if let Ok(metadata) = fs::symlink_metadata(&path) {
@@ -91,9 +110,12 @@ fn get_file_info(entry: &fs::DirEntry, show_perms: bool) -> Option<Vec<String>> 
                 .unwrap_or("N/A".to_string())
         };
         let mut info_vec = vec![
-            format!("{}{}{}  {}{}", color, glyph, get_color("reset"), file_name, get_color("reset")),         format,         file_type,     ];
+            format!("{}{}{}  {}{}", color, glyph, get_color("reset"), file_name, get_color("reset")),
+            format,
+            file_type,
+        ];
         if show_perms {
-            info_vec.push(perms_to_string(mode));
+            info_vec.push(get_platform_perms(mode));
         }
         info_vec.push(format_size(size));
         info_vec.push(datetime.format("%Y-%m-%d %H:%M:%S").to_string());
@@ -102,6 +124,7 @@ fn get_file_info(entry: &fs::DirEntry, show_perms: bool) -> Option<Vec<String>> 
         None
     }
 }
+#[cfg(unix)]
 fn perms_to_string(mode: u32) -> String {
     let mut perms = String::new();
     perms.push(if (mode & 0o170000) == 0o040000 { 'd' } else { '-' });
@@ -129,7 +152,8 @@ fn main() {
         }
     }
     let mut entries: Vec<_> = match fs::read_dir(target_dir) {
-        Ok(entries) => entries.filter_map(|entry| entry.ok()).collect(),     Err(e) => {
+        Ok(entries) => entries.filter_map(|entry| entry.ok()).collect(),
+        Err(e) => {
             eprintln!("Error reading directory: {}", e);
             return;
         }

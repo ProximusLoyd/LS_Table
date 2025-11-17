@@ -12,9 +12,14 @@ except ImportError:
             else:
                 width += 1
         return width
-COLORS = {
-    "dir": "\033[32m","file": "\033[34m","link": "\033[36m","header": "\033[92m", "reset": "\033[0m"
-,}
+if os.name == 'posix':
+    COLORS = {
+        "dir": "\033[32m","file": "\033[34m","link": "\033[36m","header": "\033[92m", "reset": "\033[0m"
+    }
+else:
+    COLORS = {
+        "dir": "","file": "","link": "","header": "", "reset": ""
+    }
 GLYPHS = {
     "dir": "","file": "","link": "","music": "","video": "", "image": "", "archive": "", "text": "", "code": "", "config": ""
 ,}
@@ -41,7 +46,7 @@ def get_file_info(entry, show_perms):
         mode = stats.st_mode
         size = stats.st_size
         modified = datetime.fromtimestamp(stats.st_mtime).strftime('%Y-%m-%d %H:%M:%S')
-        perms = stat.filemode(mode) if show_perms else ""
+        perms = stat.filemode(mode) if show_perms and os.name == 'posix' else ""
         _, ext = os.path.splitext(entry.name)
         if stat.S_ISDIR(mode):
             file_type = "dir"
